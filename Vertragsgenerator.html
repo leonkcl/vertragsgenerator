@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comedylovers – Vertragsgenerator</title>
+
+  <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+      color: white;
+      padding: 24px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    header .logo { font-size: 2rem; }
+    header h1 { font-size: 1.4rem; font-weight: 700; }
+    header p { font-size: 0.82rem; opacity: 0.65; margin-top: 2px; }
+
+    .container { max-width: 860px; margin: 36px auto; padding: 0 20px 60px; }
+
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      border: 1px solid #e8eaf0;
+    }
+
+    .card-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #e94560;
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #f0f2f5;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field.full { grid-column: 1 / -1; }
+
+    label { font-size: 0.78rem; font-weight: 600; color: #555; }
+    label .hint-badge {
+      display: inline-block;
+      background: #d1ecf1; color: #0c5460;
+      font-size: 0.63rem; padding: 1px 6px;
+      border-radius: 4px; margin-left: 5px; font-weight: 600;
+    }
+    .hint { font-size: 0.71rem; color: #999; font-weight: 400; }
+
+    input:not([type="checkbox"]):not([type="radio"]), textarea {
+      padding: 9px 13px;
+      border: 1.5px solid #dde0e8;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      color: #1a1a2e;
+      background: #fafbfc;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+    input:not([type="checkbox"]):not([type="radio"]):focus, textarea:focus {
+      outline: none;
+      border-color: #0f3460;
+      box-shadow: 0 0 0 3px rgba(15,52,96,0.1);
+      background: white;
+    }
+    input.prefilled { background: #f8f9ff; border-color: #c8d0e8; color: #556; }
+
+    /* Checkboxen */
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .checkbox-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 20px;
+      margin-top: 6px;
+    }
+    .cb-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 0.83rem;
+      font-weight: 400;
+      color: #1a1a2e;
+      cursor: pointer;
+      line-height: 1.45;
+    }
+    .cb-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      min-width: 16px;
+      margin-top: 2px;
+      accent-color: #0f3460;
+      cursor: pointer;
+    }
+
+    /* Model tabs */
+    .model-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .model-tab {
+      display: flex;
+      align-items: center;
+      padding: 8px 18px;
+      border: 1.5px solid #dde0e8;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: #666;
+      background: #fafbfc;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .model-tab input[type="radio"] { display: none; }
+    .model-tab:has(input:checked) { border-color: #0f3460; background: #0f3460; color: white; }
+
+    .verg-group { margin-top: 16px; }
+    .section-divider { border: none; border-top: 1.5px solid #f0f2f5; margin: 20px 0 16px; }
+
+    /* Pflichtfeld-Styling */
+    .field-required > label::after { content: ' *'; color: #e94560; font-weight: 700; }
+    textarea.input-error {
+      border-color: #e94560 !important;
+      box-shadow: 0 0 0 3px rgba(233,69,96,0.12) !important;
+      background: #fff8f9 !important;
+    }
+    .field-error-msg { font-size: 0.71rem; color: #e94560; font-weight: 600; display: none; }
+    .field-error-msg.visible { display: block; }
+
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px;
+      border: none; border-radius: 9px;
+      font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary {
+      background: linear-gradient(135deg, #0f3460, #16213e);
+      color: white; box-shadow: 0 4px 14px rgba(15,52,96,0.28);
+    }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(15,52,96,0.38); }
+    .btn-secondary { background: white; color: #0f3460; border: 1.5px solid #0f3460; }
+    .btn-secondary:hover { background: #f0f4ff; }
+    .btn-accent {
+      background: linear-gradient(135deg, #e94560, #c73652);
+      color: white; box-shadow: 0 4px 14px rgba(233,69,96,0.28);
+    }
+    .btn-accent:hover:not(:disabled) { transform: translateY(-1px); }
+
+    #status {
+      display: none; padding: 12px 16px; border-radius: 8px;
+      font-size: 0.85rem; margin-top: 10px;
+    }
+    #status.loading { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; display: block; }
+    #status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
+    #status.error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
+
+    @media (max-width: 600px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .card { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎭</div>
+  <div>
+    <h1>Comedylovers – Vertragsgenerator</h1>
+    <p>Kooperationsvertrag automatisch erstellen &amp; herunterladen</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ── Partner ── -->
+  <div class="card">
+    <div class="card-title">Partner-Informationen</div>
+    <div class="grid-2">
+      <div class="field full">
+        <label for="partner_firma">Firmenname Partner</label>
+        <input type="text" id="partner_firma" placeholder="z. B. N8Stallung GmbH" />
+      </div>
+      <div class="field full">
+        <label for="partner_adresse">Adresse Partner</label>
+        <input type="text" id="partner_adresse" placeholder="z. B. Johannes-Haag-Straße 36, 86153 Augsburg" />
+      </div>
+      <div class="field">
+        <label for="partner_vertreter">Vertreter (Name)</label>
+        <input type="text" id="partner_vertreter" placeholder="z. B. Maximilian Sauler" />
+      </div>
+      <div class="field">
+        <label for="partner_stadt">Stadt</label>
+        <input type="text" id="partner_stadt" placeholder="z. B. Augsburg" />
+        <span class="hint">Für die Exklusivrecht-Klausel</span>
+      </div>
+      <div class="field full">
+        <label for="partner_location_name">Kurzname Location</label>
+        <input type="text" id="partner_location_name" placeholder="z. B. N8Stallung" />
+        <span class="hint">Ohne Rechtsform, wird in der Exklusivrechts-Klausel verwendet</span>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+    <div class="field">
+      <label>Partner stellt <span class="hint">(optional – erscheint in der Präambel)</span></label>
+      <div class="checkbox-row">
+        <label class="cb-label"><input type="checkbox" id="partner_stellt_location"> Location</label>
+        <label class="cb-label"><input type="checkbox" id="partner_stellt_dinner"> Menü / Dinner</label>
+        <label class="cb-label"><input type="checkbox" id="partner_stellt_personal"> Personal</label>
+        <label class="cb-label"><input type="checkbox" id="partner_stellt_technik"> Technik</label>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+    <div class="field">
+      <label for="notiz_partner">Zusatzvereinbarung <span class="hint">(optional – erscheint in der Präambel)</span></label>
+      <textarea id="notiz_partner" rows="3" placeholder="Optionaler Freitext…"></textarea>
+    </div>
+  </div>
+
+  <!-- ── Vertragsgegenstand §1 ── -->
+  <div class="card">
+    <div class="card-title">Vertragsgegenstand (§1)</div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label>Art des Vertrags</label>
+        <div class="model-tabs">
+          <label class="model-tab"><input type="radio" name="vertragsart" value="organisation" checked>Organisation</label>
+          <label class="model-tab"><input type="radio" name="vertragsart" value="durchfuehrung">Durchführung</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Veranstalter</label>
+        <div class="model-tabs">
+          <label class="model-tab"><input type="radio" name="veranstalter" value="cl" checked>CL</label>
+          <label class="model-tab"><input type="radio" name="veranstalter" value="partner">Partner</label>
+          <label class="model-tab"><input type="radio" name="veranstalter" value="both">CL &amp; Partner</label>
+        </div>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+    <div class="field">
+      <label>CL übernimmt folgende Aufgaben <span class="hint">(§1 Abs. 2 – alles leer = Abschnitt entfällt)</span></label>
+      <div class="checkbox-group">
+        <label class="cb-label"><input type="checkbox" id="cl_task_1"> Buchung des Künstlers bzw. der Künstler und alle damit verbundenen Aufgaben / Vertragsabschluss erfolgt direkt zwischen Agentur und Künstler</label>
+        <label class="cb-label"><input type="checkbox" id="cl_task_2"> Marketing für die gemeinsam abgestimmten Shows und Termine in Zusammenarbeit und enger Abstimmung mit dem Betreiber</label>
+        <label class="cb-label"><input type="checkbox" id="cl_task_3"> Ticketing / Verkauf von Eintrittskarten / Verwaltung und Verwahrung der Einnahmen und alle damit verbundenen Aufgaben</label>
+        <label class="cb-label"><input type="checkbox" id="cl_task_4"> Zusätzliche Technik, Lautsprecher / Techniker / Mikrofonierung und ggf. Spots.</label>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+    <div class="field">
+      <label>Partner übernimmt folgende Aufgaben <span class="hint">(§1 Abs. 3 – alles leer = Abschnitt entfällt)</span></label>
+      <div class="checkbox-group">
+        <label class="cb-label"><input type="checkbox" id="partner_task_1"> Bereitstellung der Location</label>
+        <label class="cb-label"><input type="checkbox" id="partner_task_2"> Organisation und Durchführung der Veranstaltung</label>
+        <label class="cb-label"><input type="checkbox" id="partner_task_3"> Bereitstellung von Personal vor Ort</label>
+        <label class="cb-label"><input type="checkbox" id="partner_task_4"> Einholung, Aufrechterhaltung aller erforderlichen Genehmigungen und Gestattungen zum Betrieb und zur Durchführung der Veranstaltung(en)</label>
+        <label class="cb-label"><input type="checkbox" id="partner_task_5"> Abschluss und Aufrechterhaltung einer passenden und ausreichend dimensionierten Versicherung für die Durchführung der vertragsgegenständlichen Veranstaltung(en) bezogen auf die konkrete Location</label>
+        <label class="cb-label"><input type="checkbox" id="partner_task_6"> Ticketing / Verkauf von Eintrittskarten / Verwaltung und Verwahrung der Einnahmen und alle damit verbundenen Aufgaben</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Event ── -->
+  <div class="card">
+    <div class="card-title">Event-Details (§2)</div>
+    <div class="grid-2">
+      <div class="field full">
+        <label for="event_name">Bezeichnung / Titel des Events</label>
+        <input type="text" id="event_name" value="Comedy Dinner - 4 Gänge Menü + 3 Comedians" />
+        <span class="hint">Wird in §2 Abs. 4 eingesetzt: „Die maximale Belegung der Sitzplätze für [Titel] liegt bei…"</span>
+      </div>
+      <div class="field">
+        <label for="min_tickets">Mindesttickets</label>
+        <input type="number" id="min_tickets" value="50" min="1" />
+      </div>
+      <div class="field">
+        <label for="max_tickets">Max. Belegung (Tickets)</label>
+        <input type="number" id="max_tickets" value="100" min="1" />
+      </div>
+      <div class="field">
+        <label for="absage_frist">Absagefrist (Tage vor VA)</label>
+        <input type="number" id="absage_frist" value="6" min="1" />
+      </div>
+      <div class="field full">
+        <label for="notiz_event">Zusatzvereinbarung <span class="hint">(optional – erscheint in §2)</span></label>
+        <textarea id="notiz_event" rows="3" placeholder="Optionaler Freitext…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Vergütung ── -->
+  <div class="card">
+    <div class="card-title">Vergütung &amp; Kostenaufteilung (§3)</div>
+
+    <div class="field">
+      <label>Vergütungsmodell</label>
+      <div class="model-tabs">
+        <label class="model-tab"><input type="radio" name="verg_modell" value="aufteilung" checked onchange="updateVergModell()">Aufteilung</label>
+        <label class="model-tab"><input type="radio" name="verg_modell" value="mischung" onchange="updateVergModell()">CL-Mindestbetrag</label>
+        <label class="model-tab"><input type="radio" name="verg_modell" value="fixpreis" onchange="updateVergModell()">CL-Festpreis</label>
+      </div>
+    </div>
+
+    <div id="verg_split_fields" class="verg-group">
+      <div class="grid-3">
+        <div class="field">
+          <label for="ticket_preis">Ticketpreis gesamt</label>
+          <input type="text" id="ticket_preis" placeholder="z. B. 94,90" />
+          <span class="hint">zzgl. Ticketanbieter-Gebühren</span>
+        </div>
+        <div class="field">
+          <label for="cl_anteil" id="cl_anteil_label">Anteil CL</label>
+          <input type="text" id="cl_anteil" placeholder="z. B. 47,45" />
+        </div>
+        <div class="field">
+          <label for="partner_anteil">Anteil Partner</label>
+          <input type="text" id="partner_anteil" placeholder="z. B. 47,45" />
+        </div>
+      </div>
+    </div>
+
+    <div id="verg_mindest_field" class="verg-group" style="display:none;">
+      <div class="grid-2">
+        <div class="field">
+          <label for="cl_mindest">Mindestbetrag CL (gesamt)</label>
+          <input type="text" id="cl_mindest" placeholder="z. B. 2.000" />
+          <span class="hint">CL erhält mindestens diesen Betrag</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="verg_fix_fields" class="verg-group" style="display:none;">
+      <div class="grid-2">
+        <div class="field">
+          <label for="cl_festpreis">Festpreis CL</label>
+          <input type="text" id="cl_festpreis" placeholder="z. B. 1.500" />
+          <span class="hint">Pauschalvergütung für CL – Partner erhält alle übrigen Ticketeinnahmen</span>
+        </div>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+    <div class="field">
+      <label>Partner trägt Kosten für <span class="hint">(§3 Abs. 3 – optional, Mehrfachauswahl)</span></label>
+      <div class="checkbox-row">
+        <label class="cb-label"><input type="checkbox" id="partner_kosten_location"> Location</label>
+        <label class="cb-label"><input type="checkbox" id="partner_kosten_dinner"> Dinner</label>
+        <label class="cb-label"><input type="checkbox" id="partner_kosten_wein"> Wein</label>
+        <label class="cb-label"><input type="checkbox" id="partner_kosten_personal"> Personal vor Ort</label>
+        <label class="cb-label"><input type="checkbox" id="partner_kosten_technik"> Technik (anteilig) <span class="hint" style="margin-left:4px;">– Betrag aus „Weitere Kosten"</span></label>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+    <div class="verg-group">
+      <div class="grid-2">
+        <div class="field">
+          <label for="weitere_kosten">Weitere Kosten <span class="hint">(optional)</span></label>
+          <input type="text" id="weitere_kosten" placeholder="z. B. 180" oninput="updateWeitereKosten()" />
+        </div>
+      </div>
+    </div>
+
+    <div class="field" id="notiz_verguetung_wrapper" style="margin-top: 18px;">
+      <label for="notiz_verguetung">Zusatzvereinbarung <span id="notiz_verguetung_hint" class="hint">(optional – erscheint in §3)</span></label>
+      <textarea id="notiz_verguetung" rows="3" placeholder="Optionaler Freitext…" oninput="validateNotizVerguetung()"></textarea>
+      <span class="field-error-msg" id="notiz_verguetung_error">Bitte die Kostenzusammensetzung beschreiben.</span>
+    </div>
+  </div>
+
+  <!-- ── CL & Sonstiges ── -->
+  <div class="card">
+    <div class="card-title">Comedy Lovers (CL) &amp; Sonstiges</div>
+    <div class="grid-2">
+      <div class="field">
+        <label for="cl_vertreter">Vertreter CL <span class="hint-badge">Vorausgefüllt</span></label>
+        <input type="text" id="cl_vertreter" value="Iyob Almedom" class="prefilled" />
+      </div>
+      <div class="field">
+        <label for="cl_adresse">Adresse CL <span class="hint-badge">Vorausgefüllt</span></label>
+        <input type="text" id="cl_adresse" value="Kaiserstraße 28, 76646 Bruchsal" class="prefilled" />
+      </div>
+      <div class="field">
+        <label for="vertragsdatum">Vertragsdatum</label>
+        <input type="text" id="vertragsdatum" placeholder="TT.MM.JJJJ" />
+      </div>
+      <div class="field">
+        <label for="oneflow_id">Oneflow ID <span class="hint">(optional)</span></label>
+        <input type="text" id="oneflow_id" placeholder="z. B. 10398467" />
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+    <div class="field">
+      <label>§4 Exklusivrecht <span class="hint">(optional – nur wenn Haken gesetzt)</span></label>
+      <label class="cb-label" style="margin-top: 4px;">
+        <input type="checkbox" id="exklusivrecht">
+        Exklusivrecht-Klausel in den Vertrag aufnehmen
+      </label>
+    </div>
+
+    <hr class="section-divider" />
+    <div class="field">
+      <label for="notiz_sonstiges">Zusatzvereinbarung <span class="hint">(optional – erscheint in §7)</span></label>
+      <textarea id="notiz_sonstiges" rows="3" placeholder="Optionaler Freitext…"></textarea>
+    </div>
+  </div>
+
+  <!-- ── Download ── -->
+  <div class="card">
+    <div class="card-title">Vertrag generieren</div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="generateAll()">⬇ DOCX + PDF herunterladen</button>
+      <button class="btn btn-secondary" onclick="generateDocx()">📄 Nur DOCX</button>
+      <button class="btn btn-accent" onclick="generatePdf()">📕 Nur PDF</button>
+    </div>
+    <div id="status"></div>
+  </div>
+
+</div>
+
+<script>
+// ── Hilfsfunktionen ──────────────────────────────────────────────────────────
+
+function today() {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+}
+document.getElementById('vertragsdatum').value = today();
+
+function joinList(items) {
+  if (items.length === 0) return '';
+  if (items.length === 1) return items[0];
+  return items.slice(0, -1).join(', ') + ' und ' + items[items.length - 1];
+}
+
+function withEuro(val) {
+  if (!val) return '';
+  const s = val.toString().trim();
+  return s.includes('\u20ac') ? s : s + '\u00a0\u20ac';
+}
+
+// ── Vergütungsmodell umschalten ──────────────────────────────────────────────
+
+function updateVergModell() {
+  const modell = document.querySelector('input[name="verg_modell"]:checked').value;
+  document.getElementById('verg_split_fields').style.display  = (modell === 'aufteilung' || modell === 'mischung') ? '' : 'none';
+  document.getElementById('verg_mindest_field').style.display = modell === 'mischung'  ? '' : 'none';
+  document.getElementById('verg_fix_fields').style.display    = modell === 'fixpreis'  ? '' : 'none';
+  document.getElementById('cl_anteil_label').textContent      = modell === 'mischung'  ? 'Anteil CL (pro Ticket)' : 'Anteil CL';
+}
+
+// ── Weitere Kosten / Pflichtfeld-Logik ───────────────────────────────────────
+
+function updateWeitereKosten() {
+  const filled = document.getElementById('weitere_kosten').value.trim() !== '';
+  const wrapper = document.getElementById('notiz_verguetung_wrapper');
+  const hint = document.getElementById('notiz_verguetung_hint');
+  if (filled) {
+    wrapper.classList.add('field-required');
+    hint.textContent = '(Pflichtfeld \u2013 Kostenzusammensetzung beschreiben)';
+    validateNotizVerguetung();
+  } else {
+    wrapper.classList.remove('field-required');
+    hint.textContent = '(optional \u2013 erscheint in \u00a73)';
+    document.getElementById('notiz_verguetung').classList.remove('input-error');
+    document.getElementById('notiz_verguetung_error').classList.remove('visible');
+  }
+}
+
+function validateNotizVerguetung() {
+  const weitereKosten = document.getElementById('weitere_kosten').value.trim();
+  if (!weitereKosten) return true;
+  const notiz = document.getElementById('notiz_verguetung').value.trim();
+  const textarea = document.getElementById('notiz_verguetung');
+  const error = document.getElementById('notiz_verguetung_error');
+  if (!notiz) {
+    textarea.classList.add('input-error');
+    error.classList.add('visible');
+    return false;
+  } else {
+    textarea.classList.remove('input-error');
+    error.classList.remove('visible');
+    return true;
+  }
+}
+
+// ── Auto-Split Ticketpreis ───────────────────────────────────────────────────
+
+document.getElementById('ticket_preis').addEventListener('blur', function() {
+  const modell = document.querySelector('input[name="verg_modell"]:checked').value;
+  if (modell === 'fixpreis') return;
+  const raw = this.value.replace(',','.').replace(/[^0-9.]/g,'');
+  const num = parseFloat(raw);
+  if (!isNaN(num)) {
+    const half = (num / 2).toFixed(2).replace('.',',');
+    if (!document.getElementById('cl_anteil').value) document.getElementById('cl_anteil').value = half;
+    if (!document.getElementById('partner_anteil').value) document.getElementById('partner_anteil').value = half;
+  }
+});
+
+// ── Daten sammeln ────────────────────────────────────────────────────────────
+
+function getData() {
+  const g  = id => document.getElementById(id)?.value.trim() || '';
+  const cb = id => document.getElementById(id)?.checked || false;
+  const modell      = document.querySelector('input[name="verg_modell"]:checked').value;
+  const vertragsart = document.querySelector('input[name="vertragsart"]:checked').value;
+  const veranstalter= document.querySelector('input[name="veranstalter"]:checked').value;
+
+  return {
+    // Partner
+    partner_firma:          g('partner_firma')   || 'Partner',
+    partner_adresse:        g('partner_adresse'),
+    partner_vertreter:      g('partner_vertreter'),
+    partner_stadt:          g('partner_stadt'),
+    partner_location_name:  g('partner_location_name'),
+    partner_stellt_location:cb('partner_stellt_location'),
+    partner_stellt_dinner:  cb('partner_stellt_dinner'),
+    partner_stellt_personal:cb('partner_stellt_personal'),
+    partner_stellt_technik: cb('partner_stellt_technik'),
+    notiz_partner:          g('notiz_partner'),
+    // §1
+    vertragsart,
+    veranstalter,
+    cl_task_1: cb('cl_task_1'), cl_task_2: cb('cl_task_2'),
+    cl_task_3: cb('cl_task_3'), cl_task_4: cb('cl_task_4'),
+    partner_task_1: cb('partner_task_1'), partner_task_2: cb('partner_task_2'),
+    partner_task_3: cb('partner_task_3'), partner_task_4: cb('partner_task_4'),
+    partner_task_5: cb('partner_task_5'), partner_task_6: cb('partner_task_6'),
+    // Event
+    event_name:   g('event_name')   || 'Comedy Dinner',
+    min_tickets:  g('min_tickets')  || '50',
+    max_tickets:  g('max_tickets')  || '100',
+    absage_frist: g('absage_frist') || '6',
+    notiz_event:  g('notiz_event'),
+    // Vergütung
+    verg_modell:   modell,
+    ticket_preis:  g('ticket_preis'),
+    cl_anteil:     g('cl_anteil'),
+    partner_anteil:g('partner_anteil'),
+    cl_mindest:    g('cl_mindest'),
+    cl_festpreis:  g('cl_festpreis'),
+    partner_kosten_location: cb('partner_kosten_location'),
+    partner_kosten_dinner:   cb('partner_kosten_dinner'),
+    partner_kosten_wein:     cb('partner_kosten_wein'),
+    partner_kosten_personal: cb('partner_kosten_personal'),
+    partner_kosten_technik:  cb('partner_kosten_technik'),
+    weitere_kosten:  g('weitere_kosten'),
+    notiz_verguetung:g('notiz_verguetung'),
+    // CL & Sonstiges
+    cl_vertreter:  g('cl_vertreter')  || 'Iyob Almedom',
+    cl_adresse:    g('cl_adresse')    || 'Kaiserstra\u00dfe 28, 76646 Bruchsal',
+    exklusivrecht: cb('exklusivrecht'),
+    notiz_sonstiges:g('notiz_sonstiges'),
+    vertragsdatum: g('vertragsdatum') || today(),
+    oneflow_id:    g('oneflow_id'),
+  };
+}
+
+function safeName(d) {
+  return `Kooperationsvertrag_${d.partner_firma.replace(/\s+/g,'_').replace(/[/\\]/g,'-')}_${d.vertragsdatum.replace(/\./g,'-')}`;
+}
+
+function setStatus(type, msg) {
+  const el = document.getElementById('status');
+  el.className = type;
+  el.textContent = msg;
+}
+
+// ── Vertragstexte berechnen (geteilt zwischen DOCX & PDF) ────────────────────
+
+function buildTexts(d) {
+  // Präambel
+  const partnerStelltItems = [];
+  if (d.partner_stellt_location) partnerStelltItems.push('die Location');
+  if (d.partner_stellt_dinner)   partnerStelltItems.push('das Men\u00fc / Dinner');
+  if (d.partner_stellt_personal) partnerStelltItems.push('das Personal');
+  if (d.partner_stellt_technik)  partnerStelltItems.push('die Technik');
+
+  let praembelStr = `CL organisiert und vermarktet Veranstaltungen unter dem Namen \u201eComedy Lovers\u201c.`;
+  if (partnerStelltItems.length > 0) {
+    praembelStr += ` Der Partner stellt ${joinList(partnerStelltItems)}.`;
+  }
+  praembelStr += ` Beide Parteien m\u00f6chten im Rahmen einer Zusammenarbeit ein erfolgreiches Event durchf\u00fchren und legen hierf\u00fcr die folgenden Vereinbarungen fest:`;
+
+  // §1 (1)
+  const vertragsartStr  = d.vertragsart === 'organisation' ? 'Organisation' : 'Durchf\u00fchrung';
+  const veranstalterStr = d.veranstalter === 'cl'      ? 'CL'
+                        : d.veranstalter === 'partner' ? 'dem Partner'
+                        : 'CL und dem Partner';
+  const veranstalterVerb = d.veranstalter === 'both' ? 'auftreten' : 'auftritt';
+  const para1_1 = `(1) Gegenstand dieses Vertrags ist die ${vertragsartStr} eines Events, bei dem ${veranstalterStr} als Veranstalter ${veranstalterVerb}.`;
+
+  // §1 (2) CL-Aufgaben
+  const clTaskTexts = [
+    'Buchung des K\u00fcnstlers bzw. der K\u00fcnstler und alle damit verbundenen Aufgaben / Vertragsabschluss erfolgt direkt zwischen Agentur und K\u00fcnstler',
+    'Marketing f\u00fcr die gemeinsam abgestimmten Shows und Termine in Zusammenarbeit und enger Abstimmung mit dem Betreiber',
+    'Ticketing / Verkauf von Eintrittskarten / Verwaltung und Verwahrung der Einnahmen und alle damit verbundenen Aufgaben',
+    'Zus\u00e4tzliche Technik, Lautsprecher / Techniker / Mikrofonierung und ggf. Spots.',
+  ];
+  const clTasksChecked = clTaskTexts.filter((_, i) => [d.cl_task_1, d.cl_task_2, d.cl_task_3, d.cl_task_4][i]);
+
+  // §1 (3) Partner-Aufgaben
+  const partnerTaskTexts = [
+    'Bereitstellung der Location',
+    'Organisation und Durchf\u00fchrung der Veranstaltung',
+    'Bereitstellung von Personal vor Ort',
+    'Einholung, Aufrechterhaltung aller erforderlichen Genehmigungen und Gestattungen zum Betrieb und zur Durchf\u00fchrung der Veranstaltung(en)',
+    'Abschluss und Aufrechterhaltung einer passenden und ausreichend dimensionierten Versicherung f\u00fcr die Durchf\u00fchrung der vertragsgegenst\u00e4ndlichen Veranstaltung(en) bezogen auf die konkrete Location',
+    'Ticketing / Verkauf von Eintrittskarten / Verwaltung und Verwahrung der Einnahmen und alle damit verbundenen Aufgaben',
+  ];
+  const partnerTasksChecked = partnerTaskTexts.filter((_, i) =>
+    [d.partner_task_1, d.partner_task_2, d.partner_task_3, d.partner_task_4, d.partner_task_5, d.partner_task_6][i]);
+
+  // §3 Vergütung Abs. 1
+  let verg1 = [];
+  if (d.verg_modell === 'fixpreis') {
+    verg1 = [{ type:'body', text:`(1) CL erh\u00e4lt f\u00fcr die Durchf\u00fchrung des Events einen Festpreis in H\u00f6he von ${withEuro(d.cl_festpreis)}. Weitere Einnahmen aus dem Ticketverkauf stehen ausschlie\u00dflich dem Partner zu.` }];
+  } else if (d.verg_modell === 'mischung') {
+    verg1 = [
+      { type:'body',   text:`(1) Die Einnahmen aus dem Ticketverkauf sind ${withEuro(d.ticket_preis)} zzgl. Geb\u00fchren (Ticketanbieter abh\u00e4ngig) und werden wie folgt zwischen den Parteien aufgeteilt:` },
+      { type:'bullet', text:`${withEuro(d.cl_anteil)} pro Ticket f\u00fcr CL, mindestens jedoch ${withEuro(d.cl_mindest)} insgesamt` },
+      { type:'bullet', text:`${withEuro(d.partner_anteil)} f\u00fcr den Partner` },
+    ];
+  } else {
+    verg1 = [
+      { type:'body',   text:`(1) Die Einnahmen aus dem Ticketverkauf sind ${withEuro(d.ticket_preis)} zzgl. Geb\u00fchren (Ticketanbieter abh\u00e4ngig) und werden wie folgt zwischen den Parteien aufgeteilt:` },
+      { type:'bullet', text:`${withEuro(d.cl_anteil)} f\u00fcr CL` },
+      { type:'bullet', text:`${withEuro(d.partner_anteil)} f\u00fcr den Partner` },
+    ];
+  }
+
+  // §3 Abs. 3 Partner-Kosten
+  const partnerKostenItems = [];
+  if (d.partner_kosten_location) partnerKostenItems.push('die Location');
+  if (d.partner_kosten_dinner)   partnerKostenItems.push('das Dinner');
+  if (d.partner_kosten_wein)     partnerKostenItems.push('den Wein');
+  if (d.partner_kosten_personal) partnerKostenItems.push('das Personal vor Ort');
+  if (d.partner_kosten_technik)  partnerKostenItems.push(d.weitere_kosten
+    ? `die Technik (anteilig, ${withEuro(d.weitere_kosten)})`
+    : 'die Technik (anteilig)');
+
+  return { praembelStr, para1_1, clTasksChecked, partnerTasksChecked, verg1, partnerKostenItems };
+}
+
+// ── DOCX ─────────────────────────────────────────────────────────────────────
+
+async function buildDocx(d) {
+  const { Document, Packer, Paragraph, TextRun, AlignmentType } = docx;
+
+  const SP     = (after=160) => new Paragraph({ children:[], spacing:{after} });
+  const title  = (text, size=32) => new Paragraph({ children:[new TextRun({text, bold:true, size})], alignment:AlignmentType.CENTER, spacing:{after:80} });
+  const heading= text => new Paragraph({ children:[new TextRun({text, bold:true, size:22})], spacing:{before:240, after:80} });
+  const body   = text => new Paragraph({ children:[new TextRun({text, size:20})], alignment:AlignmentType.JUSTIFY, spacing:{after:80} });
+  const bullet = text => new Paragraph({ children:[new TextRun({text, size:20})], alignment:AlignmentType.JUSTIFY, spacing:{after:60}, bullet:{level:0} });
+  const sig    = text => new Paragraph({ children:[new TextRun({text, bold:true, size:20})], spacing:{before:160, after:60} });
+
+  const t = buildTexts(d);
+
+  const children = [
+    title('Kooperationsvertrag', 32),
+    title(d.event_name, 26),
+    SP(200),
+
+    body('zwischen'),
+    SP(80),
+    body(`Comedy Lovers Deutschland (CL)\nAdresse: [${d.cl_adresse}]  |  Vertreten durch: [${d.cl_vertreter}]\nnachfolgend \u201eCL\u201c genannt \u2013`),
+    SP(80),
+    body('und'),
+    SP(80),
+    body(`[${d.partner_firma}]\nAdresse: [${d.partner_adresse}]  |  Vertreten durch: [${d.partner_vertreter}]\nnachfolgend \u201ePartner\u201c genannt \u2013`),
+    SP(200),
+
+    heading('Pr\u00e4ambel'),
+    body(t.praembelStr),
+    ...(d.notiz_partner ? [body(d.notiz_partner)] : []),
+
+    heading('\u00a71 Gegenstand des Vertrags'),
+    body(t.para1_1),
+    ...(t.clTasksChecked.length > 0 ? [
+      body('(2) CL \u00fcbernimmt die folgenden Aufgaben:'),
+      ...t.clTasksChecked.map(txt => bullet(txt)),
+    ] : []),
+    ...(t.partnerTasksChecked.length > 0 ? [
+      body(`(${t.clTasksChecked.length > 0 ? '3' : '2'}) Der Partner \u00fcbernimmt die folgenden Aufgaben:`),
+      ...t.partnerTasksChecked.map(txt => bullet(txt)),
+    ] : []),
+
+    heading('\u00a72 Vertragsdauer'),
+    body('(1) Dieser Vertrag tritt f\u00fcr jedes ausgemachte Event/Datum in Kraft und gilt bis zur vollst\u00e4ndigen Durchf\u00fchrung des Events.'),
+    body('(2) Eine Verl\u00e4ngerung des Vertrags bedarf keiner schriftlichen Zustimmung beider Parteien. Dieser Vertrag gilt f\u00fcr alle schriftlich vereinbarten Termine.'),
+    body(`(3) Die Mindestanzahl der Ticketk\u00e4ufer pro Show betr\u00e4gt ${d.min_tickets} Tickets. Wird dieses Ziel bis ${d.absage_frist} Tage vor der VA nicht erreicht, wird die VA abgesagt und ggfls. nach Absprache verlegt.`),
+    body(`(4) Die maximale Belegung der Sitzpl\u00e4tze f\u00fcr ${d.event_name} liegt bei ${d.max_tickets} Tickets.`),
+    ...(d.notiz_event ? [body(d.notiz_event)] : []),
+
+    heading('\u00a73 Verg\u00fctung'),
+    ...t.verg1.map(item => item.type === 'bullet' ? bullet(item.text) : body(item.text)),
+    body('(2) CL tr\u00e4gt die Kosten f\u00fcr die K\u00fcnstler / Comedians, alle \u00dcbernachtungen, Fahrtkosten.'),
+    ...(t.partnerKostenItems.length > 0 ? [body(`(3) Der Partner tr\u00e4gt die Kosten f\u00fcr ${joinList(t.partnerKostenItems)}.`)] : []),
+    ...(d.notiz_verguetung ? [body(d.notiz_verguetung)] : []),
+
+    heading('\u00a74 Pflichten von CL'),
+    body('(1) CL verpflichtet sich, die K\u00fcnstler/Comedians sorgf\u00e4ltig auszuw\u00e4hlen und sicherzustellen, dass diese p\u00fcnktlich und professionell auftreten.'),
+    body('(2) CL wird s\u00e4mtliche Werbema\u00dfnahmen rechtzeitig planen und umsetzen, um eine optimale Vermarktung des Events zu gew\u00e4hrleisten.'),
+    body('(3) CL stellt sicher, dass der Ticketverkauf reibungslos abl\u00e4uft und den gesetzlichen Bestimmungen entspricht.'),
+    ...(d.exklusivrecht ? [body(`(4) CL \u00fcbertr\u00e4gt dem Partner ${d.partner_location_name} das Exklusivrecht zur Durchf\u00fchrung von \u201eComedy Dinner\u201c-Veranstaltungen in ${d.partner_stadt} mit CL, beschr\u00e4nkt auf die eigenen R\u00e4umlichkeiten der ${d.partner_location_name}. Ausgenommen hiervon sind \u201eComedy Dinner\u201c-Veranstaltungen in ${d.partner_stadt} im Rahmen geschlossener Firmenveranstaltungen bzw. auf individuelle Firmenanfragen. Weitere Comedy-Formate \u2013 mit Ausnahme von \u201eWein & Comedy\u201c \u2013 sind von diesem Exklusivrecht nicht ber\u00fchrt. Ziel beider Parteien ist eine langfristige, partnerschaftliche Zusammenarbeit.`)] : []),
+
+    heading('\u00a75 Pflichten des Partners'),
+    body('(1) Der Partner verpflichtet sich, die Location in einem sauberen und funktionsf\u00e4higen Zustand bereitzustellen.'),
+    body('(2) Der Partner sorgt f\u00fcr eine qualitativ hochwertige Durchf\u00fchrung des Dinners und stellt ausreichend geschultes Personal bereit.'),
+    body('(3) Der Partner gew\u00e4hrleistet die Bereitstellung und den einwandfreien Betrieb der technischen Ausstattung vor Ort.'),
+    body('(4) Der Partner wird s\u00e4mtliche Werbema\u00dfnahmen rechtzeitig planen und umsetzen, um eine optimale Vermarktung des Events zu gew\u00e4hrleisten.'),
+    ...(d.weitere_kosten ? [body(`(5) Der Partner \u00fcbernimmt anteilig bei jeder Veranstaltung die Kosten f\u00fcr die technische Ausstattung in H\u00f6he von ${withEuro(d.weitere_kosten)} brutto.`)] : []),
+
+    heading('\u00a76 Haftung'),
+    body('(1) Schadenersatzanspr\u00fcche au\u00dferhalb der gesetzlichen M\u00e4ngelhaftungsanspr\u00fcche kann der Betreiber nur bei Vorsatz oder grob fahrl\u00e4ssigem Verhalten der Agentur geltend machen. Dieser Haftungsausschluss gilt nicht bei Verletzung des Lebens, des K\u00f6rpers oder der Gesundheit und im Falle der Verletzung wesentlicher Vertragspflichten.'),
+    body('(2) Au\u00dfer bei Vorsatz, grober Fahrl\u00e4ssigkeit und Sch\u00e4den aus der Verletzung des Lebens, des K\u00f6rpers oder der Gesundheit ist die Haftung der Agentur der H\u00f6he nach auf die bei Vertragsschluss typischerweise vorhersehbaren Sch\u00e4den begrenzt.'),
+    body('(3) Die Haftung der Agentur nach dem Produkthaftungsgesetz und sonstigen zwingenden gesetzlichen Vorschriften bleibt unber\u00fchrt.'),
+
+    heading('\u00a77 Sonstige Bestimmungen'),
+    body('(1) \u00c4nderungen und Erg\u00e4nzungen dieses Vertrags bed\u00fcrfen der Schriftform.'),
+    body('(2) Sollten einzelne Bestimmungen dieses Vertrags unwirksam sein oder werden, bleibt die Wirksamkeit der \u00fcbrigen Bestimmungen unber\u00fchrt. Anstelle der unwirksamen Bestimmung treten die gesetzlichen Regelungen.'),
+    body('(3) Der Gerichtsstand f\u00fcr alle Streitigkeiten aus diesem Vertrag ist der Sitz von CL.'),
+    ...(d.notiz_sonstiges ? [body(d.notiz_sonstiges)] : []),
+
+    heading('\u00a78 Schlussbestimmungen'),
+    body('(1) Dieser Vertrag unterliegt dem Recht der Bundesrepublik Deutschland.'),
+    body('(2) Beide Parteien best\u00e4tigen durch ihre Unterschrift, dass sie diesen Vertrag gelesen haben und mit dessen Inhalt einverstanden sind.'),
+
+    SP(300),
+    sig('Vertragspartner \u2013 Unterschrift'),
+    body(`[${d.partner_firma}]\nAdresse: [${d.partner_adresse}]\nVertreten durch: [${d.partner_vertreter}]`),
+    SP(300),
+    body('_________________________________\nUnterschrift / Datum'),
+    SP(400),
+    sig('Vertragspartner'),
+    body(`COMEDY LOVERS Deutschland\n${d.vertragsdatum}`),
+    SP(300),
+    body('_________________________________\nUnterschrift / Datum'),
+  ];
+
+  if (d.oneflow_id) {
+    children.push(SP(200), new Paragraph({
+      children: [new TextRun({ text: `Oneflow ID ${d.oneflow_id}`, size:16, color:'888888' })],
+      alignment: AlignmentType.CENTER,
+    }));
+  }
+
+  return await Packer.toBlob(new Document({
+    sections: [{ properties:{ page:{ margin:{ top:1080, bottom:1080, left:1296, right:1296 } } }, children }]
+  }));
+}
+
+// ── PDF ──────────────────────────────────────────────────────────────────────
+
+function buildPdf(d) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const W = 210, ML = 22, MR = 22, TW = W - ML - MR;
+  let y = 25;
+  const pageH = 297, MB = 20;
+
+  function checkPage(needed=10) { if (y + needed > pageH - MB) { doc.addPage(); y = 20; } }
+  function wrap(text, fs, bold, maxW) { doc.setFontSize(fs); doc.setFont('helvetica', bold?'bold':'normal'); return doc.splitTextToSize(text, maxW||TW); }
+  function heading(text) { checkPage(12); y+=4; doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(text, ML, y); y+=7; }
+  function body(text, size=9.5) {
+    const lines = wrap(text, size, false);
+    doc.setFont('helvetica','normal'); doc.setFontSize(size);
+    lines.forEach(l => { checkPage(5); doc.text(l, ML, y); y+=5; }); y+=2;
+  }
+  function bodyBullet(text) {
+    const lines = wrap(text, 9.5, false, TW-5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+    lines.forEach((l,i) => { checkPage(5); if(i===0){doc.text('\u2022',ML+1,y);doc.text(l,ML+5,y);}else doc.text(l,ML+5,y); y+=5; }); y+=1;
+  }
+
+  const t = buildTexts(d);
+
+  // Titel
+  doc.setFont('helvetica','bold'); doc.setFontSize(17);
+  doc.text('Kooperationsvertrag', W/2, y, {align:'center'}); y+=9;
+  doc.setFontSize(12);
+  doc.text(d.event_name, W/2, y, {align:'center'}); y+=6;
+  doc.setDrawColor(180,180,180); doc.line(ML, y, W-MR, y); y+=8;
+
+  body('zwischen'); y+=2;
+  body(`Comedy Lovers Deutschland (CL)\nAdresse: [${d.cl_adresse}]  |  Vertreten durch: [${d.cl_vertreter}]\nnachfolgend \u201eCL\u201c genannt \u2013`);
+  y+=2; body('und'); y+=2;
+  body(`[${d.partner_firma}]\nAdresse: [${d.partner_adresse}]  |  Vertreten durch: [${d.partner_vertreter}]\nnachfolgend \u201ePartner\u201c genannt \u2013`);
+  y+=6;
+
+  heading('Pr\u00e4ambel');
+  body(t.praembelStr);
+  if (d.notiz_partner) body(d.notiz_partner);
+
+  heading('\u00a71 Gegenstand des Vertrags');
+  body(t.para1_1);
+  if (t.clTasksChecked.length > 0) {
+    body('(2) CL \u00fcbernimmt die folgenden Aufgaben:');
+    t.clTasksChecked.forEach(txt => bodyBullet(txt));
+  }
+  if (t.partnerTasksChecked.length > 0) {
+    body(`(${t.clTasksChecked.length > 0 ? '3' : '2'}) Der Partner \u00fcbernimmt die folgenden Aufgaben:`);
+    t.partnerTasksChecked.forEach(txt => bodyBullet(txt));
+  }
+
+  heading('\u00a72 Vertragsdauer');
+  body('(1) Dieser Vertrag tritt f\u00fcr jedes ausgemachte Event/Datum in Kraft und gilt bis zur vollst\u00e4ndigen Durchf\u00fchrung des Events.');
+  body('(2) Eine Verl\u00e4ngerung des Vertrags bedarf keiner schriftlichen Zustimmung beider Parteien. Dieser Vertrag gilt f\u00fcr alle schriftlich vereinbarten Termine.');
+  body(`(3) Die Mindestanzahl der Ticketk\u00e4ufer pro Show betr\u00e4gt ${d.min_tickets} Tickets. Wird dieses Ziel bis ${d.absage_frist} Tage vor der VA nicht erreicht, wird die VA abgesagt und ggfls. nach Absprache verlegt.`);
+  body(`(4) Die maximale Belegung der Sitzpl\u00e4tze f\u00fcr ${d.event_name} liegt bei ${d.max_tickets} Tickets.`);
+  if (d.notiz_event) body(d.notiz_event);
+
+  heading('\u00a73 Verg\u00fctung');
+  t.verg1.forEach(item => item.type === 'bullet' ? bodyBullet(item.text) : body(item.text));
+  body('(2) CL tr\u00e4gt die Kosten f\u00fcr die K\u00fcnstler / Comedians, alle \u00dcbernachtungen, Fahrtkosten.');
+  if (t.partnerKostenItems.length > 0) body(`(3) Der Partner tr\u00e4gt die Kosten f\u00fcr ${joinList(t.partnerKostenItems)}.`);
+  if (d.notiz_verguetung) body(d.notiz_verguetung);
+
+  heading('\u00a74 Pflichten von CL');
+  body('(1) CL verpflichtet sich, die K\u00fcnstler/Comedians sorgf\u00e4ltig auszuw\u00e4hlen und sicherzustellen, dass diese p\u00fcnktlich und professionell auftreten.');
+  body('(2) CL wird s\u00e4mtliche Werbema\u00dfnahmen rechtzeitig planen und umsetzen, um eine optimale Vermarktung des Events zu gew\u00e4hrleisten.');
+  body('(3) CL stellt sicher, dass der Ticketverkauf reibungslos abl\u00e4uft und den gesetzlichen Bestimmungen entspricht.');
+  if (d.exklusivrecht) body(`(4) CL \u00fcbertr\u00e4gt dem Partner ${d.partner_location_name} das Exklusivrecht zur Durchf\u00fchrung von \u201eComedy Dinner\u201c-Veranstaltungen in ${d.partner_stadt} mit CL, beschr\u00e4nkt auf die eigenen R\u00e4umlichkeiten der ${d.partner_location_name}. Ausgenommen hiervon sind \u201eComedy Dinner\u201c-Veranstaltungen in ${d.partner_stadt} im Rahmen geschlossener Firmenveranstaltungen bzw. auf individuelle Firmenanfragen. Weitere Comedy-Formate \u2013 mit Ausnahme von \u201eWein & Comedy\u201c \u2013 sind von diesem Exklusivrecht nicht ber\u00fchrt. Ziel beider Parteien ist eine langfristige, partnerschaftliche Zusammenarbeit.`);
+
+  heading('\u00a75 Pflichten des Partners');
+  body('(1) Der Partner verpflichtet sich, die Location in einem sauberen und funktionsf\u00e4higen Zustand bereitzustellen.');
+  body('(2) Der Partner sorgt f\u00fcr eine qualitativ hochwertige Durchf\u00fchrung des Dinners und stellt ausreichend geschultes Personal bereit.');
+  body('(3) Der Partner gew\u00e4hrleistet die Bereitstellung und den einwandfreien Betrieb der technischen Ausstattung vor Ort.');
+  body('(4) Der Partner wird s\u00e4mtliche Werbema\u00dfnahmen rechtzeitig planen und umsetzen, um eine optimale Vermarktung des Events zu gew\u00e4hrleisten.');
+  if (d.weitere_kosten) body(`(5) Der Partner \u00fcbernimmt anteilig bei jeder Veranstaltung die Kosten f\u00fcr die technische Ausstattung in H\u00f6he von ${withEuro(d.weitere_kosten)} brutto.`);
+
+  heading('\u00a76 Haftung');
+  body('(1) Schadenersatzanspr\u00fcche au\u00dferhalb der gesetzlichen M\u00e4ngelhaftungsanspr\u00fcche kann der Betreiber nur bei Vorsatz oder grob fahrl\u00e4ssigem Verhalten der Agentur geltend machen. Dieser Haftungsausschluss gilt nicht bei Verletzung des Lebens, des K\u00f6rpers oder der Gesundheit und im Falle der Verletzung wesentlicher Vertragspflichten.');
+  body('(2) Au\u00dfer bei Vorsatz, grober Fahrl\u00e4ssigkeit und Sch\u00e4den aus der Verletzung des Lebens, des K\u00f6rpers oder der Gesundheit ist die Haftung der Agentur der H\u00f6he nach auf die bei Vertragsschluss typischerweise vorhersehbaren Sch\u00e4den begrenzt.');
+  body('(3) Die Haftung der Agentur nach dem Produkthaftungsgesetz und sonstigen zwingenden gesetzlichen Vorschriften bleibt unber\u00fchrt.');
+
+  heading('\u00a77 Sonstige Bestimmungen');
+  body('(1) \u00c4nderungen und Erg\u00e4nzungen dieses Vertrags bed\u00fcrfen der Schriftform.');
+  body('(2) Sollten einzelne Bestimmungen dieses Vertrags unwirksam sein oder werden, bleibt die Wirksamkeit der \u00fcbrigen Bestimmungen unber\u00fchrt. Anstelle der unwirksamen Bestimmung treten die gesetzlichen Regelungen.');
+  body('(3) Der Gerichtsstand f\u00fcr alle Streitigkeiten aus diesem Vertrag ist der Sitz von CL.');
+  if (d.notiz_sonstiges) body(d.notiz_sonstiges);
+
+  heading('\u00a78 Schlussbestimmungen');
+  body('(1) Dieser Vertrag unterliegt dem Recht der Bundesrepublik Deutschland.');
+  body('(2) Beide Parteien best\u00e4tigen durch ihre Unterschrift, dass sie diesen Vertrag gelesen haben und mit dessen Inhalt einverstanden sind.');
+
+  checkPage(60); y+=6;
+  doc.setDrawColor(180,180,180); doc.line(ML, y, W-MR, y); y+=8;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10);
+  doc.text('Vertragspartner \u2013 Unterschrift', ML, y); y+=6;
+  body(`[${d.partner_firma}]\nAdresse: [${d.partner_adresse}]\nVertreten durch: [${d.partner_vertreter}]`);
+  y+=12; body('_________________________________\nUnterschrift / Datum');
+  y+=14;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10);
+  doc.text('Vertragspartner', ML, y); y+=6;
+  body(`COMEDY LOVERS Deutschland\n${d.vertragsdatum}`);
+  y+=12; body('_________________________________\nUnterschrift / Datum');
+
+  if (d.oneflow_id) {
+    checkPage(10); y+=8;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(150,150,150);
+    doc.text(`Oneflow ID ${d.oneflow_id}`, W/2, y, {align:'center'}); doc.setTextColor(0,0,0);
+  }
+
+  return doc.output('blob');
+}
+
+// ── Download & Generate ───────────────────────────────────────────────────────
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function generateDocx() {
+  if (!validateNotizVerguetung()) { setStatus('error', 'Bitte die Kostenzusammensetzung unter \u201eWeitere Kosten\u201c beschreiben.'); return; }
+  setStatus('loading', 'DOCX wird erstellt...');
+  try {
+    const d = getData();
+    downloadBlob(await buildDocx(d), safeName(d) + '.docx');
+    setStatus('success', 'DOCX erfolgreich heruntergeladen.');
+  } catch(e) { setStatus('error', 'Fehler: ' + e.message); }
+}
+
+function generatePdf() {
+  if (!validateNotizVerguetung()) { setStatus('error', 'Bitte die Kostenzusammensetzung unter \u201eWeitere Kosten\u201c beschreiben.'); return; }
+  setStatus('loading', 'PDF wird erstellt...');
+  try {
+    const d = getData();
+    downloadBlob(buildPdf(d), safeName(d) + '.pdf');
+    setStatus('success', 'PDF erfolgreich heruntergeladen.');
+  } catch(e) { setStatus('error', 'Fehler: ' + e.message); }
+}
+
+async function generateAll() {
+  if (!validateNotizVerguetung()) { setStatus('error', 'Bitte die Kostenzusammensetzung unter \u201eWeitere Kosten\u201c beschreiben.'); return; }
+  setStatus('loading', 'DOCX + PDF werden erstellt...');
+  try {
+    const d = getData();
+    const name = safeName(d);
+    downloadBlob(await buildDocx(d), name + '.docx');
+    await new Promise(r => setTimeout(r, 400));
+    downloadBlob(buildPdf(d), name + '.pdf');
+    setStatus('success', 'DOCX + PDF erfolgreich heruntergeladen.');
+  } catch(e) { setStatus('error', 'Fehler: ' + e.message); }
+}
+</script>
+</body>
+</html>
