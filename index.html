@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comedylovers – Vertragswerke</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+      color: white;
+      padding: 32px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    header .logo { font-size: 2.4rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { font-size: 0.85rem; opacity: 0.65; margin-top: 3px; }
+
+    .container {
+      max-width: 900px;
+      margin: 48px auto;
+      padding: 0 20px 80px;
+    }
+
+    .section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #999;
+      margin-bottom: 16px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+
+    .contract-card {
+      background: white;
+      border-radius: 14px;
+      padding: 28px 26px;
+      border: 1px solid #e8eaf0;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .contract-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.11);
+      border-color: #c8d0e8;
+    }
+    .contract-card.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .contract-card .card-icon { font-size: 2rem; }
+    .contract-card .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+    .contract-card .card-desc {
+      font-size: 0.8rem;
+      color: #777;
+      line-height: 1.5;
+    }
+    .contract-card .card-arrow {
+      margin-top: auto;
+      padding-top: 14px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #0f3460;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .contract-card:hover .card-arrow { gap: 8px; }
+
+    .badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 20px;
+    }
+    .badge-live { background: #d4edda; color: #155724; }
+    .badge-soon { background: #f0f2f5; color: #999; }
+
+    .accent-bar {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #e94560, #0f3460);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .contract-card:hover .accent-bar { opacity: 1; }
+
+    footer {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #bbb;
+      margin-top: 60px;
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 24px 20px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎭</div>
+  <div>
+    <h1>Comedylovers – Vertragswerke</h1>
+    <p>Verträge erstellen, herunterladen und versenden</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="section-label">Verfügbare Generatoren</div>
+  <div class="grid">
+
+    <a class="contract-card" href="Vertragsgenerator.html">
+      <span class="badge badge-live">Live</span>
+      <div class="accent-bar"></div>
+      <div class="card-icon">🤝</div>
+      <div class="card-title">Kooperationsvertrag</div>
+      <div class="card-desc">Für Locations & Partner – inkl. Vergütungsmodell, Exklusivrecht und Aufgabenverteilung.</div>
+      <div class="card-arrow">Öffnen →</div>
+    </a>
+
+    <div class="contract-card disabled">
+      <span class="badge badge-soon">Bald</span>
+      <div class="card-icon">🎤</div>
+      <div class="card-title">Künstlervertrag</div>
+      <div class="card-desc">Für Comedians & Künstler – Gage, Auftrittsbedingungen und Nutzungsrechte.</div>
+      <div class="card-arrow">In Vorbereitung</div>
+    </div>
+
+    <div class="contract-card disabled">
+      <span class="badge badge-soon">Bald</span>
+      <div class="card-icon">🏢</div>
+      <div class="card-title">Firmenvertrag</div>
+      <div class="card-desc">Für Corporate Events & Firmenanfragen – individuell, professionell, rechtssicher.</div>
+      <div class="card-arrow">In Vorbereitung</div>
+    </div>
+
+  </div>
+
+</div>
+
+<footer>
+  Comedylovers Deutschland &nbsp;·&nbsp; Vertragswerke intern
+</footer>
+
+</body>
+</html>
